@@ -1,0 +1,170 @@
+/************************************ Elements based css start here! ************************************/
+
+body { background:#424242;}
+img {vertical-align: middle}
+
+
+/************************************ Common css start here! ************************************/
+.img-fluid { width:100%; height:auto;} 
+
+/*
+.text-muted {}
+.text-primary {color:#d83838}
+.text-success {}
+.text-info {}
+.text-warning {}
+.text-danger {}
+
+.bg-primary {}
+.bg-success {}
+.bg-info {}
+.bg-warning {}
+.bg-danger {}
+
+.btn-default
+.btn-primary
+.btn-success
+.btn-info
+.btn-warning
+.btn-danger
+.btn-link
+
+*/
+
+h1, h2, h3, h4 { margin-top:10px;}
+
+h1 {}
+h2 {}
+h3 {color:#d63838}
+
+.text-primary {color:#d83838}
+
+.bg-primary { background:#000000;color:#fff;}
+.bg-primary a{color:#fff; text-decoration:underline}
+
+.bg-danger { background:#313131;color:#fff;}
+.bg-danger a{color:#fff; text-decoration:underline}
+
+.bg-success { background:#8c8c8c;color:#fff;}
+.bg-success a{color:#fff; text-decoration:underline}
+.bg-info    { background:#fff;}
+
+.btn-primary {color: #fff;background-color: #d9534f;border-color: #c12e2a;}
+
+.bg-warning {color: #fff;background-color: #f0ad4e;border-color: #eea236;padding-left: 0;padding-right: 0;}
+
+header .bg-warning {border-top:red solid 4px;border-bottom:red solid 5px }
+header .alert img { margin-top:15px;}
+
+.navbar{ border-radius: 0px;margin-bottom:0px;}
+.navbar-default .navbar-nav>li>a {color: #fff;}
+.navbar-default .navbar-nav>li>a:focus, .navbar-default .navbar-nav>li>a:hover {color: #333;
+																				background-color:#fff;}
+.navbar-default .navbar-nav>.active>a, .navbar-default .navbar-nav>.active>a:focus, .navbar-default .navbar-nav>.active>a:hover {
+  color: #fff;background-color: #8c8c8c;}
+
+.navbar-default {background-color: #8c8c8c;border-color: #8c8c8c;}
+
+.navbar-default .navbar-toggle, .navbar-default .navbar-toggle {
+  background-color: #FFF;
+}
+
+.navbar-default .navbar-toggle:focus, .navbar-default .navbar-toggle:hover {
+  background-color: #FFF;
+}
+.navbar button { margin-top:8px;}
+.dropdown:hover .dropdown-menu {display: block;}
+.dropdown-menu>li>a {padding: 6px 20px; border-bottom: dashed 1px #ccc;}
+.dropdown-menu>li:last-child>a {border-bottom:none;}
+/*select option{border:red solid 1px;}*/
+.form-group  { margin-bottom:10px;}
+.main-container .row { padding-top:20px;padding-bottom:20px;}
+
+
+.main-container .jumbotron {padding:10px 20px;background-color: #fff;color:#494949; text-align:center;}
+.main-container .jumbotron p { font-size:14px; margin-top:10px; text-align:justify} 
+.main-container .jumbotron a { color:#494949; text-decoration:underline;} 
+footer .row { padding-top:20px;padding-bottom:20px;}
+footer .row { border-top:red solid 1px;}
+footer .row p{  text-align:center;}
+
+
+.map{
+  width: 100%;
+  height: 100%;
+}
+
+#listing_map{
+  width: 600px;
+  height: 350px;
+} 
+
+#loading {
+  height: 100%;
+  width: 100%;
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  z-index: 99999;
+  background-color: gray;
+  filter: alpha(opacity=75);
+  -moz-opacity: 0.75;
+  opacity: 0.75;
+  display: none;
+}
+#loading h2 {
+  position: fixed;
+  margin-left: 42%;
+  top: 42%;
+}
+#loading img {
+  position: fixed;
+  margin-left: 40%;
+  top: 40%;
+}
+
+#collapseRentalRequestForm .panel{
+  background-color: #424242;
+}
+.panel-group a{
+  color: blue;
+}
+
+.panel-body {
+  color: grey;
+}
+
+/************************************ Bootstrap override css start here!  ************************************/
+.carousel-control.left , .carousel-control.right { background:none;}
+/*.carousel-indicators li {width: 18px;height: 18px;margin: 1px 3px;border: 1px solid #fff;border-radius: 10px; background:#fff;}
+.carousel-indicators .active {background-color:#009098;width:18px;height:18px;margin: 0;}*/
+/************************************ Page or Section specific css start here! ************************************/
+
+
+/************************************ Media Query start here! ************************************/
+
+/* Large desktop */
+
+@media (min-width: 1200px) {
+  .HideOnDesktop {display: none !important}
+}
+
+/* Portrait tablet to landscape and desktop */
+@media (min-width: 768px) and (max-width: 979px) {
+  .HideOnTablate {display: none !important}
+}
+
+/* Landscape phone to portrait tablet */
+@media (max-width: 767px) {
+  .HideOnTablate {display:none !important}
+  header .bg-primary div { text-align:center;}
+  header .bg-info {text-align:center;}
+}
+
+/* Landscape phones and down */
+@media (max-width: 480px) {
+  .HideOnMobile {display:none !important}
+  header .bg-primary div { text-align:center;}
+  header .bg-info {text-align:center;}
+  header .alert img { margin-top:5px;}
+}

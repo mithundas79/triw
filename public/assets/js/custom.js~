@@ -1,0 +1,701 @@
+var api_url = 'http://dev.sdfcloud.net/sdf3/public/api/';
+//api_url = 'http://local.sdf3.com/api/';
+var api_base_url = 'http://local.sdf3.com/';
+
+var $client = null;
+
+var g_category_id = 0;
+
+var today = new Date();
+
+$(document).ready(function (e) {
+  /*xdomain.masters({
+   'http://dev.sdfcloud.net': '/sdf3/public/api/*',
+   'http://local.sdf3.com': '/api/*'
+   });*/
+
+  $(document).ajaxStart(function () {
+	$('#loading').show();
+  });
+
+  $(document).ajaxStop(function () {
+	$('#loading').hide();
+  });
+
+  $client = new $.RestClient(api_url + "realestate/");
+
+  $('#incfont').click(function () {
+
+
+	curSize = parseInt($('.main-container').css('font-size')) + 2;
+
+	if (curSize <= 20)
+	  $('.main-container').css('font-size', curSize);
+  });
+  $('#decfont').click(function () {
+	curSize = parseInt($('.main-container').css('font-size')) - 2;
+	if (curSize >= 12)
+	  $('.main-container').css('font-size', curSize);
+  });
+
+  //setting api
+  $client.add('categories', {
+	stripTrailingSlash: true
+  });
+  $client.add('listings', {
+	stripTrailingSlash: true
+  });
+
+  $client.add('bookings', {
+	stripTrailingSlash: true
+  });
+
+  var cat = getUrlParameter('cat');
+  var page = getCurentFileName();
+  //console.log(page);
+  if (cat == 26 || page == 'category-list.html') {
+	getPropertyList();
+
+
+  }
+
+  createMenu();
+
+
+  //$('.collapse').collapse();
+
+  /*Booking Calendar*/
+  //Date for the calendar events (dummy data)
+  var date = new Date();
+  var d = date.getDate(),
+		  m = date.getMonth(),
+		  y = date.getFullYear();
+
+
+  $(".refreshPropertyCode").change(function () {
+	//console.log($('option:selected', this).attr('listing_id'));
+	$(".property_code").val($('option:selected', this).attr('listing_id'));
+  });
+
+  $(".property_code").change(function () {
+	$('.booking_calendar').fullCalendar('refetchEvents');
+  });
+
+});
+var createMenu = function () {
+  getCategories(buildMenu);
+};
+
+var buildMenu = function (data) {
+  //console.log(data);
+  if (data.success == true) {
+	var mainNav = jQuery("#main_nav");
+	var navContainer = jQuery('<div class="container">');
+	navContainer.append('<div class="navbar-header"><button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target=".navbar-collapse"> <span class="sr-only">Toggle navigation</span> <span class="icon-bar"></span> <span class="icon-bar"></span> <span class="icon-bar"></span> </button></div>');
+
+	var navList = jQuery('<ul class="nav navbar-nav">');
+	var navItem = jQuery('<li><a href="#" data-toggle="collapse" data-target=".navbar-collapse">Home</a></li>');
+	navList.append(navItem);
+	jQuery.each(data.items, function (index, item) {
+	  var navItem = '';
+	  if (item.children.length > 0) {
+		navItem = jQuery('<li class="dropdown"> <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">' + item.name + ' <span class="caret"></span></a></li>');
+		navItem.append(recursiveMenuItem(item.children));
+	  } else {
+		navItem = jQuery('<li><a href="#" onclick="getPropertyListByCat(' + item.id + ');" data-toggle="collapse" data-target=".navbar-collapse">' + item.name + '</a></li>');
+	  }
+
+	  navList.append(navItem);
+	  //console.log(item);
+
+	});
+
+	navContainer.append(jQuery('<div class="navbar-collapse collapse">').append(navList));
+
+	mainNav.html('')
+			.append(jQuery('<div class="navbar navbar-default" role="navigation">').append(navContainer));
+  }
+};
+
+var recursiveMenuItem = function (items) {
+  var navList = jQuery('<ul class="dropdown-menu" role="menu">');
+  jQuery.each(items, function (index, item) {
+	var navItem = '';
+	if (item.children.length > 0) {
+	  navItem = jQuery('<li class="dropdown"> <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">' + item.name + ' <span class="caret"></span></a></li>');
+	  navItem.append(recursiveMenuItem(item.children));
+	} else {
+	  navItem = jQuery('<li><a href="#"  onclick="getPropertyListByCat(' + item.id + ');" data-toggle="collapse" data-target=".navbar-collapse">' + item.name + '</a></li>');
+	}
+
+	navList.append(navItem);
+  });
+
+  return navList;
+};
+
+var getCategories = function (cb) {
+  try {
+	var request = $client.categories.read();
+	request.done(function (data) {
+	  //console.log(data);
+	  if (data.success == true) {
+
+	  }
+	  cb(data);
+	});
+  } catch (e) {
+	console.error(e.toString());
+  }
+};
+
+var getPropertyListByCat = function (category_id) {
+  g_category_id = category_id;
+  try {
+	var request = $client.listings.read({category_id: category_id});
+	request.done(function (data) {
+	  //console.log(data);
+	  if (data.success == true) {
+		renderPropertyList(data);
+	  }
+	});
+  } catch (e) {
+	console.error(e.toString());
+  }
+};
+
+var getPropertyList = function () {
+  g_category_id = 0;
+  try {
+	var request = $client.listings.read();
+	request.done(function (data) {
+	  //console.log(data);
+	  if (data.success == true) {
+		renderPropertyList(data);
+	  }
+	});
+  } catch (e) {
+	console.error(e.toString());
+  }
+};
+
+var renderImages = function (item, container) {
+  if (typeof item.images != 'undefined' && item.images.length > 0) {
+	var imgHtmls = '<div class="col-sm-3">';
+	var imgHtmls = '<div id="images_' + item.title + '_' + item.id + '" class="carousel slide" data-ride="carousel">';
+	var indicators = '<ol class="carousel-indicators">';
+	var images = '<div class="carousel-inner" role="listbox">';
+
+	jQuery.each(item.images, function (imgIndex, image) {
+	  indicators += '<li data-target="#images_' + item.title + '_' + item.id + '" data-slide-to="' + imgIndex + '"></li>';
+	  images += '<div class="item">';
+
+	  images += '<img src="' + api_url + 'realestate/img/' + image.thumb_url + '" alt="' + image.caption + '">';
+	  images += '<div class="carousel-caption">';
+	  images += image.caption;
+	  images += '</div>';
+
+	  images += '</div>';
+	});
+	images += '</div>';
+
+	images += '<a class="left carousel-control" href="#carousel-example-generic" role="button" data-slide="prev">';
+	images += '<span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span>';
+	images += '<span class="sr-only">Previous</span>';
+	images += '</a>';
+	images += '<a class="right carousel-control" href="#carousel-example-generic" role="button" data-slide="next">';
+	images += '<span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span>';
+	images += ' <span class="sr-only">Next</span>';
+	images += '</a>';
+
+
+	imgHtmls += indicators + images + '</div></div>';
+	var itemImg = jQuery(imgHtmls);
+	container.append(itemImg);
+  }
+
+
+};
+
+var renderPropertyList = function (data) {
+  if (data.success == true) {
+	jQuery("#cat-listings").html('');
+	if (data.items.length == 0) {
+	  jQuery("#cat-listings").html('<div class="row"><div class="col-sm-12">No records found!</div></div>');
+	  return false;
+	}
+	jQuery.each(data.items, function (index, item) {
+	  //console.log(item);
+	  var itemRow = jQuery('<div class="row"></div>');
+	  var itemTitle = jQuery('<div class="col-sm-12"><h2>' + item.title + '</h2></div>');
+
+	  if (typeof item.images != 'undefined' && item.images.length > 0) {
+		var imgHtmls = '<div class="col-sm-3">';
+		var first_image = '';
+		var main_image = '';
+		var all_images = '';
+		jQuery.each(item.images, function (imgIndex, image) {
+		  if (imgIndex == 0) {
+			first_image = '<img src="' + api_url + 'realestate/img/' + image.thumb_url + '" class="img-fluid"/>';
+		  }
+		  if (image.is_main == 1) {
+			main_image = '<img src="' + api_url + 'realestate/img/' + image.thumb_url + '" class="img-fluid"/>';
+		  }
+		  all_images += '<img src="' + api_url + 'realestate/img/' + image.thumb_url + '" class="img-fluid"/>';
+		  ;
+		});
+		if (main_image != '') {
+		  imgHtmls += main_image;
+		} else {
+		  imgHtmls += first_image;
+		}
+		imgHtmls += '</div>';
+		var itemImg = jQuery(imgHtmls);
+	  }
+
+
+	  var itemDesc = jQuery('<div class="col-sm-9"><p>' + item.description + ' <br/> <a href="#" onclick="getPropertyListDetail(' + item.id + ' )">More Info..</a></p></div>');
+
+	  itemRow.append(itemTitle);
+	  itemRow.append(itemImg);
+	  itemRow.append(itemDesc);
+	  jQuery("#cat-listings").append(itemRow);
+	});
+  }
+};
+
+var getPropertyListDetail = function (id) {
+  try {
+	var request = $client.listings.read(id);
+	request.done(function (data) {
+	  //console.log(data);
+	  if (data.success == true) {
+		jQuery("#cat-listings").html('');
+		var item = data.item;
+		//console.log(item);
+		var itemRow = jQuery('<div class="row"></div>');
+		var itemTitle = jQuery('<div class="col-sm-12"><h2>' + item.title + '</h2></div>');
+
+		if (typeof item.images != 'undefined' && item.images.length > 0) {
+		  var imgHtmls = '<div class="col-sm-3">';
+		  var first_image = '';
+		  var main_image = '';
+		  var all_images = '';
+		  jQuery.each(item.images, function (imgIndex, image) {
+			if (imgIndex == 0) {
+			  first_image = '<img src="' + api_url + 'realestate/img/' + image.thumb_url + '" class="img-fluid"/>';
+			}
+			if (image.is_main == 1) {
+			  main_image = '<img src="' + api_url + 'realestate/img/' + image.thumb_url + '" class="img-fluid"/>';
+			}
+			all_images += '<img src="' + api_url + 'realestate/img/' + image.thumb_url + '" class="img-fluid"/>';
+			;
+		  });
+		  if (main_image != '') {
+			imgHtmls += main_image;
+		  } else {
+			imgHtmls += first_image;
+		  }
+		  imgHtmls += '</div>';
+		  var itemImg = jQuery(imgHtmls);
+		}
+
+
+		var itemDesc = null;
+		if (g_category_id > 0) {
+		  itemDesc = jQuery('<div class="col-sm-9"><p>' + item.description + '<br> <a href="#" onclick="getPropertyListByCat(' + g_category_id + ')">Back to List</a></p></div><div class="col-sm-12"><p></p></div>');
+		} else {
+		  itemDesc = jQuery('<div class="col-sm-9"><p>' + item.description + '<br> <a href="#" onclick="getPropertyList( )">Back to List</a></p></div><div class="col-sm-12"><p></p></div>');
+		}
+
+		itemRow.append(itemTitle);
+		itemRow.append(itemImg);
+		itemRow.append(itemDesc);
+
+
+		jQuery("#cat-listings").append(itemRow);
+		renderPropertyAttributes(item);
+
+		renderBookingForm(item, "#cat-listings");
+
+		renderCalendar(item, "#cat-listings");
+	  }
+	});
+  } catch (e) {
+	console.error(e.toString());
+  }
+};
+
+var renderBookingForm = function (item, container) {
+  var itemRow = jQuery('<div class="row"></div>');
+  var itemCol = jQuery('<div class="col-md-12">');
+  itemRow.append(itemCol);
+  jQuery(container).append(itemRow);
+
+  jQuery.ajax({
+	url: '/pages/booking-form.html',
+	type: 'GET',
+	complete: function () {
+
+	},
+	success: function (result) {
+	  var htmlStr = '<a class="btn btn-primary" href="#collapseRentalRequestForm" onclick="jQuery(\'#collapseRentalRequestForm\').toggle();">'
+	  htmlStr += 'Rental Request Form';
+	  htmlStr += '</a>';
+	  htmlStr += '<div id="collapseRentalRequestForm" style="display: none;">';
+	  htmlStr += '<div class="panel">';
+	  htmlStr += result;
+
+
+	  htmlStr += '</div>';
+	  htmlStr += '</div>';
+
+
+
+
+	  itemCol.html(jQuery(htmlStr));
+
+
+
+	  /*autocomplete property code*/
+	  $('.property_code').typeahead({
+		ajax: api_url + 'realestate/get-properties',
+		displayField: 'listing_id'
+	  });
+
+	  $(".textarea").wysihtml5();
+
+	  $('#booking_date_range').daterangepicker(
+			  {
+				//format: 'MM/DD/YYYY',
+				minDate: today
+			  },
+	  function (start, end, label) {
+		//console.log('A date range was chosen: ' + start.format('YYYY-MM-DD') + ' to ' + end.format('YYYY-MM-DD'));
+		var gotoData = $.fullCalendar.moment(start.format('YYYY-MM-DD'));
+		$('.booking_calendar').fullCalendar('gotoDate', gotoData);
+		$('.booking_calendar').fullCalendar('refetchEvents');
+	  }
+	  );
+	}
+  });
+
+};
+
+var renderCalendar = function (item, container) {
+  var htmlStr = '<div class="box box-primary"><div class="box-body no-padding">';
+  htmlStr += '<div id="booking_calendar" class="booking_calendar"></div>';
+  htmlStr += '</div><!-- /.box-body --></div><!-- /. box -->';
+
+  var itemRow = jQuery('<div class="row"></div>');
+  var itemCol = jQuery('<div class="col-md-12">');
+
+  itemCol.html(jQuery(htmlStr));
+  itemRow.append(itemCol);
+  jQuery(container).append(itemRow);
+
+  $('.booking_calendar').fullCalendar({
+	header: {
+	  left: 'prev,next today',
+	  center: '',
+	  right: 'title'
+	},
+	buttonText: {
+	  today: 'today',
+	  month: 'month',
+	  week: 'week',
+	  day: 'day'
+	},
+	editable: false,
+	droppable: false,
+	//events: base_url+'/admin/realestate/bookings/json',
+	eventSources: [
+	  {
+		url: api_url + 'realestate/booking/json',
+		data: function () {
+		  return {
+			property_code: $('#property_code').val()
+		  };
+
+		}
+	  },
+	  {
+		url: api_url + 'realestate/calendar/json',
+		data: function () {
+		  return {
+			property_code: $('.property_code').val()
+		  };
+
+		}
+	  }
+
+	],
+	dayRender: function (date, cell) {
+	  //console.log(cell);
+	  cell.addClass("status-free");
+	},
+	eventRender: function (event, element) {
+	  //console.log(element);
+	  var color = '#DFC';
+	  if (event.className == "status-booked") {
+		color = '#FFC0BD';
+	  } else if (event.className == "status-changeover") {
+		color = '#FEE2A0';
+	  }
+	  var dataToFind = moment(event.start).format('YYYY-MM-DD');
+	  $("td[data-date='" + dataToFind + "']").removeClass('status-free');
+	  $("td[data-date='" + dataToFind + "']").addClass(event.className);
+
+	  $("td[data-date='" + dataToFind + "']").css('background', color);
+	  //console.log($("td[data-date='"+dataToFind+"']"));
+	}
+  });
+};
+
+var postBookRequest = function (e) {
+  try {
+	//var bookData = $("#addBooking").serializeArray();
+	var bookData = {
+	  _token: $("#_token").val(),
+	  first_name: $("#first_name").val(),
+	  id: $("#id").val(),
+	  last_name: $("#last_name").val(),
+	  property_code: $("#property_code").val(),
+	  other_property_code: $("#other_property_code").val(),
+	  booking_date_range: $("#booking_date_range").val(),
+	  address: $("#address").val(),
+	  address2: $("#address2").val(),
+	  city: $("#city").val(),
+	  province: $("#province").val(),
+	  zip: $("#zip").val(),
+	  country: $("#country").val(),
+	  email: $("#email").val(),
+	  home_phone: $("#home_phone").val(),
+	  business_phone: $("#business_phone").val(),
+	  num_adults: $("#num_adults").val(),
+	  num_children: $("#num_children").val(),
+	  pets: $("#pets").val(),
+	  pets_description: $("#pets_description").val(),
+	  is_smoker: $("#is_smoker").val(),
+	  num_smokers: $("#num_smokers").val(),
+	  rental_price_total: $("#rental_price_total").val(),
+	  deposit: $("#deposit").val(),
+	  comments: $("#comments").val()
+	  
+	};
+	var request = $client.bookings.create(bookData);
+	request.done(function (data) {
+	  console.log(data);
+	  if (data.success === true) {
+		alert(data.message);
+	  } else {
+		alert(data.error);
+	  }
+	});
+  } catch (e) {
+	console.error(e.toString());
+  }
+  return false;
+};
+
+var renderBedrooms = function (item, accordion) {
+  if (item.bedrooms.length > 0) {
+
+	var panel = jQuery('<div class="panel panel-default">');
+	var panelHeading = jQuery('<div class="panel-heading" role="tab" id="bedrooms">');
+	var panelHeadingTitle = jQuery('<h4 class="panel-title">');
+	var panelLink = jQuery('<a href="#">Bedroom Description</a>');
+	panelHeadingTitle.append(panelLink);
+	panelHeading.append(panelHeadingTitle);
+	panel.append(panelHeading);
+
+	var panelContainer = jQuery('<div role="tabpanel">');
+	var itemContent = '<ul>';
+	if (item.bedroomTypes.length > 0) {
+	  jQuery.each(item.bedroomTypes, function (key1, bedroomType) {
+		if (bedroomType.studios.length > 0) {
+		  itemContent += '<li>' + bedroomType.title + ': ';
+		  var sep = '';
+		  jQuery.each(bedroomType.studios, function (bedroomIndex, bedroom) {
+			itemContent += sep + bedroom.title;
+			sep = ', ';
+		  });
+		  itemContent += '</li>';
+		}
+
+	  });
+	}
+	/*jQuery.each(item.bedrooms, function(bedroomIndex, bedroom){
+	 itemContent += '<li>'+bedroom.title+'</li>';
+	 });*/
+	itemContent += '</ul>';
+	//console.log(itemContent);
+	var panelbody = jQuery('<div class="panel-body"></div>').append(jQuery(itemContent));
+	panelContainer.append(panelbody);
+	panel.append(panelContainer);
+	accordion.append(panel);
+  }
+};
+
+var renderBathroom = function (item, accordion) {
+  if (item.bedrooms.length > 0) {
+	var panel = jQuery('<div class="panel panel-default">');
+	var panelHeading = jQuery('<div class="panel-heading" role="tab" id="bathroom">');
+	var panelHeadingTitle = jQuery('<h4 class="panel-title">');
+	var panelLink = jQuery('<a href="#">Bathroom Descriptions</a>');
+	panelHeadingTitle.append(panelLink);
+	panelHeading.append(panelHeadingTitle);
+	panel.append(panelHeading);
+
+	var panelContainer = jQuery('<div role="tabpanel">');
+	var itemContent = '<ul >';
+	itemContent += '<li>Ensuite 1: ' + item.bathroom_ensuite1 + '</li>';
+	itemContent += '<li>Ensuite 2: ' + item.bathroom_ensuite2 + '</li>';
+	itemContent += '<li>Bathroom 1: ' + item.bathroom1 + '</li>';
+	itemContent += '<li>Bathroom 2: ' + item.bathroom2 + '</li>';
+	itemContent += '<li>Bathroom 3: ' + item.bathroom3 + '</li>';
+	itemContent += '<li>Bathroom 4: ' + item.bathroom4 + '</li>';
+	itemContent += '<li>Notes: ' + item.bathroom_description + '</li>';
+
+	itemContent += '</ul>';
+	//console.log(itemContent);
+	var panelbody = jQuery('<div class="panel-body"></div>').append(jQuery(itemContent));
+	panelContainer.append(panelbody);
+	panel.append(panelContainer);
+	accordion.append(panel);
+  }
+};
+
+var renderAmmentities = function (item, accordion) {
+  if (item.property_ammenities.length > 0) {
+
+	var panel = jQuery('<div class="panel panel-default">');
+	var panelHeading = jQuery('<div class="panel-heading" role="tab" id="ammenities">');
+	var panelHeadingTitle = jQuery('<h4 class="panel-title">');
+	var panelLink = jQuery('<a href="#">Rental Unit Ammenities</a>');
+	panelHeadingTitle.append(panelLink);
+	panelHeading.append(panelHeadingTitle);
+	panel.append(panelHeading);
+
+	var panelContainer = jQuery('<div role="tabpanel">');
+	var itemContent = '<ul>';
+	jQuery.each(item.property_ammenities, function (key1, ammenity) {
+	  itemContent += '<li>' + ammenity.title + '</li>';
+
+	});
+
+	itemContent += '</ul>';
+	//console.log(itemContent);
+	var panelbody = jQuery('<div class="panel-body"></div>').append(jQuery(itemContent));
+	panelContainer.append(panelbody);
+	panel.append(panelContainer);
+	accordion.append(panel);
+  }
+};
+
+var renderKithenIncludes = function (item, accordion) {
+  if (item.kitchens.length > 0) {
+
+	var panel = jQuery('<div class="panel panel-default">');
+	var panelHeading = jQuery('<div class="panel-heading" role="tab" id="kitchens">');
+	var panelHeadingTitle = jQuery('<h4 class="panel-title">');
+	var panelLink = jQuery('<a href="#">Kitchen Includes</a>');
+	panelHeadingTitle.append(panelLink);
+	panelHeading.append(panelHeadingTitle);
+	panel.append(panelHeading);
+
+	var panelContainer = jQuery('<div role="tabpanel">');
+	var itemContent = '<ul>';
+	jQuery.each(item.kitchens, function (key1, kitchen) {
+	  itemContent += '<li>' + kitchen.title + '</li>';
+
+	});
+
+	itemContent += '</ul>';
+	//console.log(itemContent);
+	var panelbody = jQuery('<div class="panel-body"></div>').append(jQuery(itemContent));
+	panelContainer.append(panelbody);
+	panel.append(panelContainer);
+	accordion.append(panel);
+  }
+};
+
+var renderElectronicIncludes = function (item, accordion) {
+  if (item.electronics.length > 0) {
+
+	var panel = jQuery('<div class="panel panel-default">');
+	var panelHeading = jQuery('<div class="panel-heading" role="tab" id="electronics">');
+	var panelHeadingTitle = jQuery('<h4 class="panel-title">');
+	var panelLink = jQuery('<a href="#">Electronics Includes</a>');
+	panelHeadingTitle.append(panelLink);
+	panelHeading.append(panelHeadingTitle);
+	panel.append(panelHeading);
+
+	var panelContainer = jQuery('<div role="tabpanel">');
+	var itemContent = '<ul>';
+	jQuery.each(item.electronics, function (key1, electronic) {
+	  itemContent += '<li>' + electronic.title + '</li>';
+
+	});
+
+	itemContent += '</ul>';
+	//console.log(itemContent);
+	var panelbody = jQuery('<div class="panel-body"></div>').append(jQuery(itemContent));
+	panelContainer.append(panelbody);
+	panel.append(panelContainer);
+	accordion.append(panel);
+  }
+};
+
+
+
+var renderPropertyAttributes = function (item) {
+  //console.log(item);
+  var itemRow = jQuery('<div class="row"></div>');
+  var itemCol = jQuery('<div class="col-md-12">');
+  var accordion = jQuery('<div class="panel-group">');
+
+  //Bed Types & Locations START
+  renderBedrooms(item, accordion);
+  //Bed Types & Locations END
+
+  //Bathroom Descriptions START
+  renderBathroom(item, accordion);
+  //Bathroom Descriptions END
+  //Rental Unit Ammenities
+  renderAmmentities(item, accordion);
+
+  //renderKithenIncludes
+  renderKithenIncludes(item, accordion);
+
+  renderElectronicIncludes(item, accordion);
+
+  itemCol.append(accordion);
+  itemRow.append(itemCol);
+  jQuery("#cat-listings").append(itemRow);
+
+};
+
+
+
+function getUrlParameter(sParam)
+{
+  var sPageURL = window.location.search.substring(1);
+  var sURLVariables = sPageURL.split('&');
+  for (var i = 0; i < sURLVariables.length; i++)
+  {
+	var sParameterName = sURLVariables[i].split('=');
+	if (sParameterName[0] == sParam)
+	{
+	  return sParameterName[1];
+	}
+  }
+}
+
+
+
+
+var getCurentFileName = function () {
+  var pagePathName = window.location.pathname;
+  return pagePathName.substring(pagePathName.lastIndexOf("/") + 1);
+}
